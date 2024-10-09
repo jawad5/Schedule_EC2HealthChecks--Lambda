@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: EC2 health check function
+
+Resources:
+  ScheduleEC2HealthChecksLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: Schedule_EC2HealthChecks--Lambda
+      CodeUri: ./src  # Where your function code lives
+      Handler: index.handler
+      Runtime: nodejs20.x
+      MemorySize: 128
+      Timeout: 3
+      Architectures:
+        - x86_64
+      EphemeralStorage:
+        Size: 512
+      Role: arn:aws:iam::975050176075:role/IAMR_Schedule_EC2HealthChecks--Lambda
+      PackageType: Zip
+      Environment:
+        Variables:
+          INSTANCE_ID: i-0d885d0134ebb315c
+          SNS_TOPIC_ARN: your_sns_topic_arn
+          SQS_QUEUE_URL: https://sqs.eu-central-1.amazonaws.com/975050176075/ProcessFailures.fifo
+      Policies:
+        - Statement:
+            - Action:
+                - ec2:*
+              Effect: Allow
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: 
+                - arn:aws:sqs:eu-central-1:975050176075:ProcessFailures.fifo
+      Events:
+        Schedule1:
+          Type: Schedule
+          Properties:
+            Schedule: rate(15 minutes)  # Runs every 15 minutes
